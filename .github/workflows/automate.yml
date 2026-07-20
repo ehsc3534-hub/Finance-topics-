@@ -13,21 +13,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: List Files for Debugging
-        run: |
-          echo "=== Current Directory Content ==="
-          ls -la
-          echo "================================="
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
-      - name: Install Dependencies
-        run: npm install
-
-      - name: Run Automation Script
+      - name: Auto-Discover Project Directory and Run NPM
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
           GEMINI_TEXT_API_KEY: ${{ secrets.GEMINI_TEXT_API_KEY }}
@@ -36,5 +22,21 @@ jobs:
           BLOGGER_CLIENT_ID: ${{ secrets.BLOGGER_CLIENT_ID }}
           BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
           BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
-        run: npm run start:automation
-        
+        run: |
+          # package.json ফাইলটি কোন ফোল্ডারে আছে তা খুঁজে বের করা
+          TARGET_DIR=$(find . -name "package.json" -not -path "*/node_modules/*" -exec dirname {} \;)
+          
+          if [ -z "$TARGET_DIR" ]; then
+            echo "❌ Error: package.json file could not be found anywhere in the repository!"
+            exit 1
+          fi
+          
+          echo "🎯 Project directory found at: $TARGET_DIR"
+          cd "$TARGET_DIR"
+          
+          echo "📦 Installing Dependencies..."
+          npm install
+          
+          echo "🚀 Running Automation Script..."
+          npm run start:automation
+          
