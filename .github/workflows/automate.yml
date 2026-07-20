@@ -13,7 +13,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Auto-Discover Project Directory and Run NPM
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Fix Directory Structure and Run
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
           GEMINI_TEXT_API_KEY: ${{ secrets.GEMINI_TEXT_API_KEY }}
@@ -23,20 +28,16 @@ jobs:
           BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
           BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
         run: |
-          # package.json ফাইলটি কোন ফোল্ডারে আছে তা খুঁজে বের করা
-          TARGET_DIR=$(find . -name "package.json" -not -path "*/node_modules/*" -exec dirname {} \;)
-          
-          if [ -z "$TARGET_DIR" ]; then
-            echo "❌ Error: package.json file could not be found anywhere in the repository!"
-            exit 1
+          # যদি ফাইলগুলো ভুল করে .github/workflows এর ভেতর থাকে, তবে সেগুলোকে বাইরে নিয়ে আসা
+          if [ -f ".github/workflows/package.json" ]; then
+            echo "📦 Moving files from workflows folder to root..."
+            mv .github/workflows/package.json ./
+            mv .github/workflows/src ./
           fi
-          
-          echo "🎯 Project directory found at: $TARGET_DIR"
-          cd "$TARGET_DIR"
-          
+
           echo "📦 Installing Dependencies..."
           npm install
-          
+
           echo "🚀 Running Automation Script..."
           npm run start:automation
           
