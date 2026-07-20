@@ -1,4 +1,4 @@
-concurrency: name: Finance Content Automation Pipeline
+name: Finance Content Automation Pipeline
 
 on:
   schedule:
@@ -18,9 +18,23 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Fix Structure and Auto-Create Config
+      - name: Structure Cleanup
+        run: |
+          # কোনো ফাইল ভুল ফোল্ডারে থাকলে তা রুটে নিয়ে আসা
+          if [ -d ".github/workflows/src" ]; then
+            echo "📦 Fixing directory structure..."
+            cp -r .github/workflows/src ./
+          fi
+          if [ -f ".github/workflows/package.json" ]; then
+            cp .github/workflows/package.json ./
+          fi
+
+      - name: Install Dependencies
+        run: |
+          npm install
+
+      - name: Run Automation Script
         env:
-          MONGO_URI: ${{ secrets.MONGO_URI }}
           GEMINI_TEXT_API_KEY: ${{ secrets.GEMINI_TEXT_API_KEY }}
           GEMINI_IMAGE_API_KEY: ${{ secrets.GEMINI_IMAGE_API_KEY }}
           BLOG_ID: ${{ secrets.BLOG_ID }}
@@ -28,40 +42,5 @@ jobs:
           BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
           BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
         run: |
-          # যদি ফাইলগুলো ভুল করে .github/workflows এর ভেতর থাকে, তবে সেগুলোকে বাইরে নিয়ে আসা
-          if [ -f ".github/workflows/package.json" ]; then
-            echo "📦 Moving files from workflows folder to root..."
-            mv .github/workflows/package.json ./
-            mv .github/workflows/src ./
-          fi
-
-          # config ফোল্ডার এবং db.config.js ফাইল ডাইনামিক্যালি তৈরি করা
-          echo "📁 Creating missing config directory..."
-          mkdir -p src/config
-          
-          echo "📄 Generating db.config.js from environment variables..."
-          cat << 'EOF' > src/config/db.config.js
-          const mongoose = require('mongoose');
-
-          const connectDB = async () => {
-            try {
-              if (!process.env.MONGO_URI) {
-                throw new Error("MONGO_URI is missing in environment variables!");
-              }
-              const conn = await mongoose.connect(process.env.MONGO_URI);
-              console.log(`🟢 MongoDB Connected: ${conn.connection.host}`);
-            } catch (error) {
-              console.error(`🔴 Database connection error: ${error.message}`);
-              process.exit(1);
-            }
-          };
-
-          module.exports = connectDB;
-          EOF
-
-          echo "📦 Installing Dependencies..."
-          npm install
-
-          echo "🚀 Running Automation Script..."
           npm run start:automation
           
