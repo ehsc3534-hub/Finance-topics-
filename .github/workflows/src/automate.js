@@ -1,11 +1,10 @@
-// ১. প্রয়োজনীয় লাইব্রেরি
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { google } = require('googleapis');
 
-// ২. এপিআই কী কনফিগারেশন (আপনার সিক্রেট কি'টি এখানে সরাসরি বসানোর চেয়ে env থেকে লোড করাই ভালো)
+// FIX: এখানে জেন এআই ক্লায়েন্টকে সরাসরি API ভার্সন বলে দেওয়া হয়েছে।
+// এটি লাইব্রেরিকে v1beta তে যেতে বাধা দেবে।
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_TEXT_API_KEY);
 
-// ৩. ব্লগার অথেন্টিকেশন
 const oauth2Client = new google.auth.OAuth2(
     process.env.BLOGGER_CLIENT_ID,
     process.env.BLOGGER_CLIENT_SECRET
@@ -14,32 +13,33 @@ oauth2Client.setCredentials({ refresh_token: process.env.BLOGGER_REFRESH_TOKEN }
 const blogger = google.blogger({ version: 'v3', auth: oauth2Client });
 
 async function runAutomation() {
+    console.log("🚀 Starting Pipeline (v1 Forced)...");
     try {
-        console.log("🚀 Pipeline started...");
-
-        // ৪. মডেল ইনিশিয়ালাইজেশন (সরাসরি v1 এ কল করবে)
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        // মডেল এন্ডপয়েন্ট ভার্সন ফিক্স করা
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-1.5-flash",
+            generationConfig: { responseMimeType: "text/plain" }
+        });
         
         const topic = "Passive Income Strategies for Beginners in 2026";
-        const prompt = `Write an SEO-friendly blog post about "${topic}". Use H2, H3 tags. Do not use Markdown.`;
+        const prompt = `Write a blog post about "${topic}". Use HTML formatting.`;
 
-        // ৫. জেনারেশন
+        // রিকোয়েস্ট পাঠানোর সময় এন্ডপয়েন্ট রিকনফিগারেশন
         const result = await model.generateContent(prompt);
-        const content = result.response.text();
+        const articleHtml = result.response.text();
 
-        // ৬. পাবলিশিং
         await blogger.posts.insert({
-            blogId: process.env.BLOG_ID,
+            blogId: process.env.BLOGGER_ID,
             requestBody: {
                 title: topic,
-                content: content
+                content: articleHtml
             }
         });
 
-        console.log("✅ Success: Content published to Blogger.");
+        console.log("✅ Success! Published to Blogger.");
     } catch (error) {
-        // এরর হলে পরিষ্কারভাবে দেখাবে
-        console.error("❌ CRITICAL ERROR:", error.message);
+        // বিস্তারিত এরর দেখানোর জন্য
+        console.error("❌ CRITICAL ERROR:", error.stack);
         process.exit(1);
     }
 }
