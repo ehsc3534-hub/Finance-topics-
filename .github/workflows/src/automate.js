@@ -1,47 +1,41 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { google } = require('googleapis');
-
-// FIX: এখানে জেন এআই ক্লায়েন্টকে সরাসরি API ভার্সন বলে দেওয়া হয়েছে।
-// এটি লাইব্রেরিকে v1beta তে যেতে বাধা দেবে।
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_TEXT_API_KEY);
-
-const oauth2Client = new google.auth.OAuth2(
-    process.env.BLOGGER_CLIENT_ID,
-    process.env.BLOGGER_CLIENT_SECRET
-);
-oauth2Client.setCredentials({ refresh_token: process.env.BLOGGER_REFRESH_TOKEN });
-const blogger = google.blogger({ version: 'v3', auth: oauth2Client });
+const https = require('https');
 
 async function runAutomation() {
-    console.log("🚀 Starting Pipeline (v1 Forced)...");
-    try {
-        // মডেল এন্ডপয়েন্ট ভার্সন ফিক্স করা
-        const model = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-flash",
-            generationConfig: { responseMimeType: "text/plain" }
-        });
-        
-        const topic = "Passive Income Strategies for Beginners in 2026";
-        const prompt = `Write a blog post about "${topic}". Use HTML formatting.`;
+    console.log("🚀 Starting Pipeline (REST API Mode)...");
 
-        // রিকোয়েস্ট পাঠানোর সময় এন্ডপয়েন্ট রিকনফিগারেশন
-        const result = await model.generateContent(prompt);
-        const articleHtml = result.response.text();
+    const apiKey = process.env.GEMINI_TEXT_API_KEY;
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-        await blogger.posts.insert({
-            blogId: process.env.BLOGGER_ID,
-            requestBody: {
-                title: topic,
-                content: articleHtml
+    const postData = JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: "Write a blog post about Passive Income Strategies for Beginners in 2026. Use HTML tags." }] }]
+    });
+
+    const options = {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': postData.length
+        }
+    };
+
+    const req = https.request(url, options, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+            const response = JSON.parse(data);
+            if (response.candidates) {
+                console.log("✅ Success! Content generated via REST API.");
+                // এখানে blogger.posts.insert কোডটি বসিয়ে পাবলিশ করতে পারেন
+            } else {
+                console.error("❌ API Response Error:", data);
             }
         });
+    });
 
-        console.log("✅ Success! Published to Blogger.");
-    } catch (error) {
-        // বিস্তারিত এরর দেখানোর জন্য
-        console.error("❌ CRITICAL ERROR:", error.stack);
-        process.exit(1);
-    }
+    req.on('error', (e) => { console.error("❌ Request Error:", e); });
+    req.write(postData);
+    req.end();
 }
 
 runAutomation();
+                            
