@@ -1,4 +1,4 @@
-name: Finance Content Automation Pipeline
+concurrency: name: Finance Content Automation Pipeline
 
 on:
   schedule:
@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Fix Directory Structure and Run
+      - name: Fix Structure and Auto-Create Config
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
           GEMINI_TEXT_API_KEY: ${{ secrets.GEMINI_TEXT_API_KEY }}
@@ -34,6 +34,30 @@ jobs:
             mv .github/workflows/package.json ./
             mv .github/workflows/src ./
           fi
+
+          # config ফোল্ডার এবং db.config.js ফাইল ডাইনামিক্যালি তৈরি করা
+          echo "📁 Creating missing config directory..."
+          mkdir -p src/config
+          
+          echo "📄 Generating db.config.js from environment variables..."
+          cat << 'EOF' > src/config/db.config.js
+          const mongoose = require('mongoose');
+
+          const connectDB = async () => {
+            try {
+              if (!process.env.MONGO_URI) {
+                throw new Error("MONGO_URI is missing in environment variables!");
+              }
+              const conn = await mongoose.connect(process.env.MONGO_URI);
+              console.log(`🟢 MongoDB Connected: ${conn.connection.host}`);
+            } catch (error) {
+              console.error(`🔴 Database connection error: ${error.message}`);
+              process.exit(1);
+            }
+          };
+
+          module.exports = connectDB;
+          EOF
 
           echo "📦 Installing Dependencies..."
           npm install
