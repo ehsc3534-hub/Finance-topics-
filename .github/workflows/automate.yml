@@ -1,0 +1,35 @@
+name: Finance Content Automation Pipeline
+
+on:
+  schedule:
+    # প্রতি ১ ঘণ্টা পরপর রান করবে (Cron format)
+    - cron: '0 * * * *'
+  workflow_dispatch: # ম্যানুয়ালি রান করার অপশন
+
+jobs:
+  auto-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Automation Script
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          GEMINI_TEXT_API_KEY: ${{ secrets.GEMINI_TEXT_API_KEY }}
+          GEMINI_IMAGE_API_KEY: ${{ secrets.GEMINI_IMAGE_API_KEY }}
+          BLOG_ID: ${{ secrets.BLOG_ID }}
+          BLOGGER_CLIENT_ID: ${{ secrets.BLOGGER_CLIENT_ID }}
+          BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
+          BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
+        run: npm run start:automation
+        
