@@ -5,13 +5,16 @@ const { google } = require('googleapis');
 
 const HISTORY_FILE = path.join(__dirname, 'published_history.json');
 
+// এনভায়রনমেন্ট ভেরিয়েবল চেক
 if (!process.env.GEMINI_TEXT_API_KEY || !process.env.BLOG_ID) {
     console.error("❌ Missing required Environment Variables (API Keys / Blog ID).");
     process.exit(1);
 }
 
+// জেমিনি এআই ক্লায়েন্ট সেটআপ
 const ai = new GoogleGenerativeAI(process.env.GEMINI_TEXT_API_KEY);
 
+// ব্লগার এপিআই ক্লায়েন্ট সেটআপ
 const oauth2Client = new google.auth.OAuth2(
     process.env.BLOGGER_CLIENT_ID,
     process.env.BLOGGER_CLIENT_SECRET
@@ -21,6 +24,7 @@ oauth2Client.setCredentials({
 });
 const blogger = google.blogger({ version: 'v3', auth: oauth2Client });
 
+// লোকাল হিস্ট্রি ফাইল হ্যান্ডলিং
 function loadHistory() {
     if (!fs.existsSync(HISTORY_FILE)) {
         fs.writeFileSync(HISTORY_FILE, JSON.stringify([]));
@@ -39,6 +43,7 @@ function saveToHistory(title) {
     fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
 }
 
+// টপিক রোটেশন
 function getRandomFinanceTopic() {
     const topics = [
         "Passive Income Strategies for Beginners in 2026",
@@ -60,10 +65,10 @@ async function startAutomation() {
         const topic = getRandomFinanceTopic();
         console.log(`🎯 Target Topic Selected: ${topic}`);
 
-        console.log("🤖 Generating High-Quality Article using Gemini API...");
+        console.log("🤖 Generating High-Quality Article using Gemini Pro...");
         
-        // 👈 সঠিক মডেলের নাম ব্যবহার করা হয়েছে
-        const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+        // সব ডিভাইসে স্টেবল মডেল ব্যবহার
+        const model = ai.getGenerativeModel({ model: "gemini-pro" });
         
         const prompt = `Write a professional, SEO-optimized, engaging financial blog post about "${topic}". 
         Include an eye-catching title, structured headings (H2, H3), and clear paragraphs. 
@@ -100,4 +105,4 @@ async function startAutomation() {
 }
 
 startAutomation();
-                                                                               
+            
