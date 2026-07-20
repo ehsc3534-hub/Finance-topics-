@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { GoogleGenAI } = require('@google/generative-ai');
+const { GoogleGenerativeAI } = require('@google/generative-ai'); // 👈 নাম সংশোধন করা হয়েছে
 const { google } = require('googleapis');
 
 const HISTORY_FILE = path.join(__dirname, 'published_history.json');
@@ -11,8 +11,8 @@ if (!process.env.GEMINI_TEXT_API_KEY || !process.env.BLOG_ID) {
     process.exit(1);
 }
 
-// জেমিনি এআই ক্লায়েন্ট সেটআপ
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_TEXT_API_KEY });
+// 👈 জেমিনি এআই ক্লায়েন্ট সেটআপ (সঠিক নিয়ম)
+const ai = new GoogleGenerativeAI(process.env.GEMINI_TEXT_API_KEY);
 
 // ব্লগার এপিআই ক্লায়েন্ট সেটআপ
 const oauth2Client = new google.auth.OAuth2(
@@ -55,7 +55,6 @@ function getRandomFinanceTopic() {
         "Top High-Yield Savings Accounts to Beat Inflation"
     ];
     const history = loadHistory();
-    // এমন একটি টপিক বেছে নেওয়া যা আগে পোস্ট হয়নি
     const availableTopics = topics.filter(t => !history.some(h => h.title === t));
     return availableTopics.length > 0 ? availableTopics[0] : topics[Math.floor(Math.random() * topics.length)];
 }
@@ -67,7 +66,6 @@ async function startAutomation() {
         const topic = getRandomFinanceTopic();
         console.log(`🎯 Target Topic Selected: ${topic}`);
 
-        // ১. জেমিনি এআই দিয়ে এসইও ফ্রেন্ডলি কন্টেন্ট তৈরি
         console.log("🤖 Generating High-Quality Article using Gemini API...");
         const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
         
@@ -82,7 +80,6 @@ async function startAutomation() {
             throw new Error("Gemini API returned empty content.");
         }
 
-        // ২. ব্লগার এপিআই দিয়ে ব্লগে পোস্ট পাবলিশ করা
         console.log("📝 Publishing article to Blogger...");
         const response = await blogger.posts.insert({
             blogId: process.env.BLOG_ID,
@@ -107,4 +104,4 @@ async function startAutomation() {
 }
 
 startAutomation();
-        
+    
