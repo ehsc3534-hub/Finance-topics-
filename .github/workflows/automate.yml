@@ -9,14 +9,15 @@ jobs:
   auto-publish:
     runs-on: ubuntu-latest
 
-    # এখানে আপনার সঠিক ফোল্ডারের নাম দিন (যেমন: finance-auto-publisher)
-    defaults:
-      run:
-        working-directory: ./finance-auto-publisher
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
+
+      - name: List Files for Debugging
+        run: |
+          echo "=== Current Directory Content ==="
+          ls -la
+          echo "================================="
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
