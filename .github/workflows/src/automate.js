@@ -1,41 +1,54 @@
-const https = require('https');
+const { google } = require('googleapis');
 
-async function runAutomation() {
-    console.log("🚀 Starting Pipeline (REST API Mode)...");
+// 1. আপনার API Key সরাসরি বসান (অথবা env থেকে নিন)
+const API_KEY = process.env.GEMINI_TEXT_API_KEY; 
+const BLOG_ID = process.env.BLOG_ID;
 
-    const apiKey = process.env.GEMINI_TEXT_API_KEY;
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+// 2. ব্লগার কানেকশন
+const oauth2Client = new google.auth.OAuth2(
+    process.env.BLOGGER_CLIENT_ID,
+    process.env.BLOGGER_CLIENT_SECRET
+);
+oauth2Client.setCredentials({ refresh_token: process.env.BLOGGER_REFRESH_TOKEN });
+const blogger = google.blogger({ version: 'v3', auth: oauth2Client });
 
-    const postData = JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: "Write a blog post about Passive Income Strategies for Beginners in 2026. Use HTML tags." }] }]
-    });
+async function writeAndPublish() {
+    try {
+        console.log("🚀 কাজ শুরু হচ্ছে...");
 
-    const options = {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Content-Length': postData.length
+        // 3. জেমিনি থেকে লেখা আনা (REST API ব্যবহার করে, কোনো লাইব্রেরি ছাড়া)
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: "Write an SEO-friendly blog post about 'Passive Income Strategies for Beginners in 2026'. Use HTML formatting." }] }]
+            })
+        });
+
+        const data = await response.json();
+        
+        if (!data.candidates) {
+            console.error("❌ জেমিনি থেকে লেখা আসেনি। এরর:", data);
+            return;
         }
-    };
 
-    const req = https.request(url, options, (res) => {
-        let data = '';
-        res.on('data', (chunk) => { data += chunk; });
-        res.on('end', () => {
-            const response = JSON.parse(data);
-            if (response.candidates) {
-                console.log("✅ Success! Content generated via REST API.");
-                // এখানে blogger.posts.insert কোডটি বসিয়ে পাবলিশ করতে পারেন
-            } else {
-                console.error("❌ API Response Error:", data);
+        const articleContent = data.candidates[0].content.parts[0].text;
+        console.log("✅ লেখা তৈরি হয়েছে। এখন ব্লগারে পোস্ট করা হচ্ছে...");
+
+        // 4. ব্লগারে পোস্ট করা
+        const blogResponse = await blogger.posts.insert({
+            blogId: BLOG_ID,
+            requestBody: {
+                title: "Passive Income Strategies for Beginners in 2026",
+                content: articleContent
             }
         });
-    });
 
-    req.on('error', (e) => { console.error("❌ Request Error:", e); });
-    req.write(postData);
-    req.end();
+        console.log("✅ সফলভাবে পোস্ট হয়েছে! Post ID:", blogResponse.data.id);
+
+    } catch (error) {
+        console.error("❌ কোথায় একটা ভুল হয়েছে:", error.message);
+    }
 }
 
-runAutomation();
-                            
+writeAndPublish();
