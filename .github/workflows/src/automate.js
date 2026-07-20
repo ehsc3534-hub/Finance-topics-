@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { GoogleGenerativeAI } = require('@google/generative-ai'); // 👈 নাম সংশোধন করা হয়েছে
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { google } = require('googleapis');
 
 const HISTORY_FILE = path.join(__dirname, 'published_history.json');
@@ -11,7 +11,7 @@ if (!process.env.GEMINI_TEXT_API_KEY || !process.env.BLOG_ID) {
     process.exit(1);
 }
 
-// 👈 জেমিনি এআই ক্লায়েন্ট সেটআপ (সঠিক নিয়ম)
+// জেমিনি এআই ক্লায়েন্ট সেটআপ
 const ai = new GoogleGenerativeAI(process.env.GEMINI_TEXT_API_KEY);
 
 // ব্লগার এপিআই ক্লায়েন্ট সেটআপ
@@ -67,7 +67,9 @@ async function startAutomation() {
         console.log(`🎯 Target Topic Selected: ${topic}`);
 
         console.log("🤖 Generating High-Quality Article using Gemini API...");
-        const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+        
+        // 👈 মডেলের নাম ফরম্যাট ফিক্স করা হয়েছে (models/ প্রিফিক্স সহ)
+        const model = ai.getGenerativeModel({ model: "models/gemini-1.5-flash" });
         
         const prompt = `Write a professional, SEO-optimized, engaging financial blog post about "${topic}". 
         Include an eye-catching title, structured headings (H2, H3), and clear paragraphs. 
@@ -104,4 +106,3 @@ async function startAutomation() {
 }
 
 startAutomation();
-    
