@@ -5,15 +5,7 @@ const { google } = require('googleapis');
 
 const HISTORY_FILE = path.join(__dirname, 'published_history.json');
 
-if (!process.env.GEMINI_TEXT_API_KEY || !process.env.BLOG_ID) {
-    console.error("❌ Error: Missing Environment Variables.");
-    process.exit(1);
-}
-
-// এখানে ভার্সনটি 'v1' সেট করে দেওয়া হয়েছে যাতে 404 এরর না আসে
-const ai = new GoogleGenerativeAI(process.env.GEMINI_TEXT_API_KEY, {
-    apiVersion: 'v1'
-});
+const ai = new GoogleGenerativeAI(process.env.GEMINI_TEXT_API_KEY);
 
 const oauth2Client = new google.auth.OAuth2(
     process.env.BLOGGER_CLIENT_ID,
@@ -34,54 +26,36 @@ function saveToHistory(title) {
     fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
 }
 
-function getRandomFinanceTopic() {
-    const topics = [
-        "Passive Income Strategies for Beginners in 2026",
-        "How to Invest in Index Funds with Low Risk",
-        "The Future of Digital Banking and Cryptocurrency Regulations",
-        "Effective Budgeting Rules to Build Long-Term Wealth",
-        "Understanding Smart Real Estate Investments",
-        "Top High-Yield Savings Accounts to Beat Inflation"
-    ];
-    const history = loadHistory();
-    const available = topics.filter(t => !history.some(h => h.title === t));
-    return available.length > 0 ? available[0] : topics[Math.floor(Math.random() * topics.length)];
-}
-
 async function startAutomation() {
     console.log("🚀 Starting Pipeline...");
     
     try {
-        const topic = getRandomFinanceTopic();
-        console.log(`🎯 Target Topic: ${topic}`);
-
-        // এখানে মডেলটি সঠিকভাবে কল করা হয়েছে
+        // মডেলের নাম সরাসরি 'gemini-1.5-flash' ব্যবহার করছি (কোনো প্রিফিক্স ছাড়া)
         const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
         
-        const prompt = `Write an SEO-optimized financial blog post about "${topic}". 
-        Use HTML tags (H2, H3, p, strong). Do not use markdown backticks.`;
+        const topic = "Passive Income Strategies for Beginners in 2026";
+        const prompt = `Write an SEO-optimized financial blog post about "${topic}". Use HTML tags (H2, H3, p, strong). No markdown.`;
 
         const result = await model.generateContent(prompt);
         const articleHtml = result.response.text();
 
-        console.log("📝 Publishing to Blogger...");
         const response = await blogger.posts.insert({
             blogId: process.env.BLOG_ID,
             requestBody: {
                 title: topic,
                 content: articleHtml,
-                labels: ['Finance', 'Investment']
+                labels: ['Finance']
             }
         });
 
-        console.log(`✅ Success! Post ID: ${response.data.id}`);
+        console.log(`✅ Success! Published. Post ID: ${response.data.id}`);
         saveToHistory(topic);
 
     } catch (error) {
-        console.error("❌ Error:", error.message);
+        console.error("❌ CRITICAL ERROR:", error.message);
         process.exit(1);
     }
 }
 
 startAutomation();
-        
+    
