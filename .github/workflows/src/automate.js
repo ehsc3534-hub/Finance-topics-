@@ -1,4 +1,3 @@
-
 const fs = require('fs');
 const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -6,16 +5,16 @@ const { google } = require('googleapis');
 
 const HISTORY_FILE = path.join(__dirname, 'published_history.json');
 
-// এপিআই কি এবং ব্লগ আইডি চেক
 if (!process.env.GEMINI_TEXT_API_KEY || !process.env.BLOG_ID) {
-    console.error("❌ Error: Missing API Keys or Blog ID in environment variables.");
+    console.error("❌ Error: Missing Environment Variables.");
     process.exit(1);
 }
 
-// জেমিনি এআই ক্লায়েন্ট সেটআপ
-const ai = new GoogleGenerativeAI(process.env.GEMINI_TEXT_API_KEY);
+// এখানে ভার্সনটি 'v1' সেট করে দেওয়া হয়েছে যাতে 404 এরর না আসে
+const ai = new GoogleGenerativeAI(process.env.GEMINI_TEXT_API_KEY, {
+    apiVersion: 'v1'
+});
 
-// ব্লগার এপিআই ক্লায়েন্ট সেটআপ
 const oauth2Client = new google.auth.OAuth2(
     process.env.BLOGGER_CLIENT_ID,
     process.env.BLOGGER_CLIENT_SECRET
@@ -56,7 +55,7 @@ async function startAutomation() {
         const topic = getRandomFinanceTopic();
         console.log(`🎯 Target Topic: ${topic}`);
 
-        // ফ্রি এপিআই কি-এর জন্য সঠিক মডেল কল
+        // এখানে মডেলটি সঠিকভাবে কল করা হয়েছে
         const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
         
         const prompt = `Write an SEO-optimized financial blog post about "${topic}". 
@@ -85,3 +84,4 @@ async function startAutomation() {
 }
 
 startAutomation();
+        
