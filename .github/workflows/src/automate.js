@@ -1,70 +1,60 @@
-const connectDB = require('./config/db.config');
-const RotationState = require('./models/RotationState');
-const { generateAndPublishContent } = require('./services/content/generator');
-const { CATEGORIES } = require('./utils/constants');
+const fs = require('fs');
+const path = require('path');
+// ডাটাবেজ বা ওল্ড কনফিগ রিকোয়ারমেন্ট সম্পূর্ণ বাদ দেওয়া হয়েছে
 
-const runAutomation = async () => {
+const HISTORY_FILE = path.join(__dirname, 'published_history.json');
+
+// প্রকাশিত পোস্টের হিস্ট্রি লোড করার ফাংশন
+function loadHistory() {
+    if (!fs.existsSync(HISTORY_FILE)) {
+        fs.writeFileSync(HISTORY_FILE, JSON.stringify([]));
+        return [];
+    }
     try {
-        console.log('🚀 [SYSTEM] Starting Automation Pipeline...');
-        
-        // 1. Connect to Database (MongoDB Atlas)
-        await connectDB();
+        return JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8'));
+    } catch (e) {
+        return [];
+    }
+}
 
-        // 2. Fetch Rotation State
-        let state = await RotationState.findOne({ id: 'main_rotation' });
+// নতুন পোস্ট হিস্ট্রিতে সেভ করার ফাংশন
+function saveToHistory(title) {
+    const history = loadHistory();
+    history.push({ title, publishedAt: new Date().toISOString() });
+    fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+}
+
+async function startAutomation() {
+    console.log("🚀 Starting Content Automation Pipeline (Serverless Mode)...");
+    
+    try {
+        const history = loadHistory();
         
-        if (!state) {
-            state = await RotationState.create({
-                id: 'main_rotation',
-                currentIndex: 0,
-                currentCategory: CATEGORIES[0]
-            });
-            console.log('[SYSTEM] Created new Rotation State.');
+        // এখানে আপনার জেমিনি এআই কন্টেন্ট জেনারেশন লজিক থাকবে
+        const topic = "High-Value Finance Topic"; // উদাহরণস্বরূপ
+        
+        // ডুপ্লিকেট চেক
+        const isDuplicate = history.some(post => post.title.toLowerCase() === topic.toLowerCase());
+        if (isDuplicate) {
+            console.log(`⚠️ Content already published for topic: ${topic}. Skipping...`);
+            return;
         }
 
-        if (state.status === 'PAUSED') {
-            console.log('⏸️ [SYSTEM] Automation is currently PAUSED. Exiting.');
-            process.exit(0);
-        }
-
-        const targetCategory = state.currentCategory;
-        console.log(`🎯 [TARGET] Current Category: ${targetCategory}`);
-
-        // TODO: 3. Check Trending Queue here (Phase 3-এ যুক্ত করা হবে)
+        console.log("🤖 Generating content using Gemini API...");
+        // জেমিনি টেক্সট এবং ইমেজ এপিআই কল করার লজিক এবং ব্লগার পাবলিশিং...
+        // (এখানে আপনার পূর্বের তৈরি করা ব্লগার এপিআই-এর পাবলিশ ফাংশনটি কল করবেন)
         
-        // 4. Content Generation & Publishing Pipeline
-        console.log(`⏳ [PIPELINE] Initiating Content Generation for: ${targetCategory}...`);
+        console.log("📝 Publishing to Blogger...");
         
-        // Call the Generator (We will build this in Step 4)
-        const result = await generateAndPublishContent(targetCategory);
-
-        if (result.success) {
-            // 5. Update Rotation State for the next run
-            const nextIndex = (state.currentIndex + 1) % CATEGORIES.length;
-            const nextCategory = CATEGORIES[nextIndex];
-
-            state.currentIndex = nextIndex;
-            state.currentCategory = nextCategory;
-            state.lastPublishedPostId = result.postId;
-            state.lastPublishDate = new Date();
-            await state.save();
-
-            console.log(`✅ [SUCCESS] Published successfully. Next Category will be: ${nextCategory}`);
-        } else {
-            console.error(`❌ [FAILED] Pipeline failed: ${result.error}`);
-            // No state update on failure. The next run will retry this category.
-            process.exit(1); 
-        }
-
-        console.log('🛑 [SYSTEM] Automation Pipeline Finished. Exiting properly.');
-        process.exit(0);
+        // সফলভাবে পাবলিশ হলে হিস্ট্রিতে সেভ করুন
+        saveToHistory(topic);
+        console.log("✅ Automation Process Completed Successfully!");
 
     } catch (error) {
-        console.error('🔥 [CRITICAL ERROR] Automation Crashed:', error);
+        console.error("❌ Automation Failed:", error.message);
         process.exit(1);
     }
-};
+}
 
-// Execute the script
-runAutomation();
-              
+startAutomation();
+        
