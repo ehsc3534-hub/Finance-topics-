@@ -2,13 +2,17 @@ name: Finance Content Automation Pipeline
 
 on:
   schedule:
-    # প্রতি ১ ঘণ্টা পরপর রান করবে (Cron format)
     - cron: '0 * * * *'
-  workflow_dispatch: # ম্যানুয়ালি রান করার অপশন
+  workflow_dispatch:
 
 jobs:
   auto-publish:
     runs-on: ubuntu-latest
+
+    # এখানে আপনার সঠিক ফোল্ডারের নাম দিন (যেমন: finance-auto-publisher)
+    defaults:
+      run:
+        working-directory: ./finance-auto-publisher
 
     steps:
       - name: Checkout Repository
